@@ -321,11 +321,11 @@ public class MyTileService extends TileService {
                     getTweetFeeds().enqueue(new Callback<ResponseBody>() {
                 @Override
                 public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
+                    final AppExecutors executors = new AppExecutors();
 
                     if (response.isSuccessful() && response.body() != null) {
 
-                        AppExecutors executors = new AppExecutors();
+
                         executors.diskIO().execute(() -> {
 
                             Task task = new Task();
@@ -345,6 +345,10 @@ public class MyTileService extends TileService {
 
 
                         });
+                    } else {
+                        executors.mainThread().execute(() -> Toast.makeText
+                                (getApplicationContext(), "Token expired ", Toast.LENGTH_SHORT)
+                                .show());
                     }
                 }
 

@@ -17,8 +17,8 @@ public interface ServiceInterface {
     String TWEET_API = "/1.1/statuses/user_timeline.json?count=10&screen_name=twitterapi";
 
 
-//    enter your authorization bearer into this field
-       @GET(TWEET_API)
+    @Headers("Authorization:Bearer AAAAAAAAJD8DKDKDKKDKDKDKDKDKKDKDKDKDKDKDKD")
+    @GET(TWEET_API)
     Call<ResponseBody> getTweetFeeds();
 
 

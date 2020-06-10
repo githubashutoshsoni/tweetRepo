@@ -17,25 +17,22 @@
 package com.r3bl.stayawake;
 
 import android.Manifest;
-import android.app.ActionBar;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Typeface;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
-import android.text.Spannable;
-import android.text.style.ForegroundColorSpan;
-import android.text.util.Linkify;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.text.util.LinkifyCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -45,15 +42,15 @@ import com.google.android.gms.location.LocationServices;
 import com.r3bl.stayawake.database.Task;
 import com.r3bl.stayawake.database.ToDoDatabase;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "SA_MainActivity";
     LocationCallback mLocationCallBack;
     Location mLastLocation;
+    AppExecutors appExecutors = new AppExecutors();
+    TextView textTweetData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,8 +58,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         MyTileService.coldStart(this, false);
-        TextView textTweetData = findViewById(R.id.tweet_data);
-        AppExecutors appExecutors = new AppExecutors();
+        textTweetData = findViewById(R.id.tweet_data);
 
 
         getLocationPermission();
@@ -107,7 +103,33 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        keepFetchingAfter5secons();
 
+    }
+
+    int a = 0;
+
+    void keepFetchingAfter5secons() {
+
+
+        Handler handler = new Handler();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+
+                if (a <= 5) {
+
+                    fetchFromDb();
+
+                    keepFetchingAfter5secons();
+                } else
+                    handler.removeCallbacks(this::run);
+            }
+        };
+        handler.postDelayed(runnable, 5000);
+    }
+
+    void fetchFromDb() {
         appExecutors.diskIO().execute(() -> {
 
             List<Task> tasksList = ToDoDatabase.getInstance(MainActivity.this).taskDao().getTasks();
@@ -118,13 +140,21 @@ public class MainActivity extends AppCompatActivity {
                 for (Task task
                         : tasksList
                 ) {
-                    textTweetData.setText(task.getContent());
+                    appExecutors.mainThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            textTweetData.setText(task.getContent());
+                        }
+                    });
+
                 }
             }
 
 
         });
     }
+
+
 
     public static final int REQUEST_LOCATION_PERMISSION = 1;
 
@@ -192,8 +222,6 @@ public class MainActivity extends AppCompatActivity {
             //todo make retry otp call
             Log.d(TAG, " onActivityResult Location permission granted");
             getLocation();
-//            resendOtp();
-//            setUpCountDownTimer();
         } else {
 
             getLocationPermission();
@@ -203,6 +231,10 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+
+    static void getFromdb() {
+
+    }
 
     public void buttonStartAwakeClicked(View view) {
         MyTileService.coldStart(this, true);
